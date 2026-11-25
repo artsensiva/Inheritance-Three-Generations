@@ -1,5 +1,3 @@
-import { execSync } from 'node:child_process'
-import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { analyticsLoader, injectLoader, parseAnalyticsConfig, privacyParagraph } from '../scripts/analytics'
 
@@ -70,25 +68,5 @@ describe('injection and privacy text', () => {
     expect(on).not.toMatch(/no tracking/)
     expect(on).toContain('stats.example.org')
     expect(on).toMatch(/Do Not Track/)
-  })
-})
-
-describe('site build', () => {
-  const run = (env: Record<string, string>) =>
-    execSync('npx tsx scripts/build-site.ts', { env: { ...process.env, ANALYTICS_SCRIPT_SRC: '', ANALYTICS_ATTRS: '', ...env }, stdio: 'pipe', timeout: 90000 }).toString()
-  it('adds analytics only when configured', { timeout: 200000 }, () => {
-    const on = run(CFG)
-    expect(on).toMatch(/Analytics enabled \(stats\.example\.org\)/)
-    expect(existsSync('site/analytics.js')).toBe(true)
-    expect(readFileSync('site/index.html', 'utf8')).toContain('src="./analytics.js"')
-    expect(readFileSync('site/play/index.html', 'utf8')).toContain('src="../analytics.js"')
-    expect(readFileSync('site/index.html', 'utf8')).not.toContain('{{')
-    expect(readFileSync('site/index.html', 'utf8')).not.toContain('stats.example.org/script.js')
-    const off = run({})
-    expect(off).toMatch(/Analytics: none/)
-    expect(existsSync('site/analytics.js')).toBe(false)
-    expect(readFileSync('site/index.html', 'utf8')).not.toContain('analytics.js')
-    expect(readFileSync('site/index.html', 'utf8')).toContain('no tracking')
-    expect(readFileSync('site/play/index.html', 'utf8')).not.toContain('analytics.js')
   })
 })

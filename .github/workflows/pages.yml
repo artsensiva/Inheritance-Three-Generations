@@ -33,6 +33,12 @@ jobs:
           ANALYTICS_SCRIPT_SRC: ${{ vars.ANALYTICS_SCRIPT_SRC }}
           ANALYTICS_ATTRS: ${{ vars.ANALYTICS_ATTRS }}
           VITE_WISHLIST_URL: ${{ vars.WISHLIST_URL }}
+          # Optional buy flow (Stripe Payment Link); see docs/PAYMENTS.md. Unset = no buy button, no legal pages.
+          # With PAYMENT_LINK_URL set, the build fails until LEGAL_DETAILS and the price are complete.
+          PAYMENT_LINK_URL: ${{ vars.PAYMENT_LINK_URL }}
+          PRICE_LABEL: ${{ vars.PRICE_LABEL }}
+          DOWNLOAD_URL: ${{ vars.DOWNLOAD_URL }}
+          LEGAL_DETAILS: ${{ vars.LEGAL_DETAILS }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
