@@ -41,7 +41,7 @@ function lines(text: string, x: number, y: number, size: number, width: number, 
 }
 
 /** A self-contained SVG legacy card. Everything shown is drawn from the recorded ending. */
-export function legacySvg(family: string, e: Ending): string {
+export function legacySvg(family: string, e: Ending, opts: { demo?: boolean } = {}): string {
   const parts: string[] = []
   parts.push(`<rect width="${W}" height="${H}" fill="#f1e6cf"/>`)
   parts.push(`<rect x="28" y="28" width="${W - 56}" height="${H - 56}" fill="none" stroke="#2a2118" stroke-width="3"/>`)
@@ -80,9 +80,15 @@ export function legacySvg(family: string, e: Ending): string {
   })
   y += 30
   const amb = e.ambition
-  parts.push(`<rect x="90" y="${y}" width="${W - 180}" height="86" rx="8" fill="${amb.met ? '#dfe9d6' : '#efe0c2'}" stroke="#2a2118" stroke-width="1.5"/>`)
-  parts.push(`<text x="120" y="${y + 36}" font-size="26" font-weight="700" fill="#2a2118">Ambition: ${esc(amb.title)}</text>`)
-  parts.push(`<text x="120" y="${y + 68}" font-size="22" fill="#2a2118">${amb.met ? '✓ Fulfilled' : 'Not fulfilled this time'} — ${esc(amb.conds.map((c) => (c.ok ? '✓' : '✗')).join(' '))}</text>`)
+  if (opts.demo) {
+    parts.push(`<rect x="90" y="${y}" width="${W - 180}" height="86" rx="8" fill="#efe0c2" stroke="#2a2118" stroke-width="1.5"/>`)
+    parts.push(`<text x="120" y="${y + 36}" font-size="26" font-weight="700" fill="#2a2118">The story continues…</text>`)
+    parts.push(`<text x="120" y="${y + 68}" font-size="22" fill="#2a2118">Two more generations will inherit these choices.</text>`)
+  } else {
+    parts.push(`<rect x="90" y="${y}" width="${W - 180}" height="86" rx="8" fill="${amb.met ? '#dfe9d6' : '#efe0c2'}" stroke="#2a2118" stroke-width="1.5"/>`)
+    parts.push(`<text x="120" y="${y + 36}" font-size="26" font-weight="700" fill="#2a2118">Ambition: ${esc(amb.title)}</text>`)
+    parts.push(`<text x="120" y="${y + 68}" font-size="22" fill="#2a2118">${amb.met ? '✓ Fulfilled' : 'Not fulfilled this time'} — ${esc(amb.conds.map((c) => (c.ok ? '✓' : '✗')).join(' '))}</text>`)
+  }
   y += 126
   const t = e.threads[0]
   const note = t ? t.sentences[0] + ' ' + t.sentences[t.sentences.length - 1] : e.facts[0] ?? ''
@@ -91,7 +97,7 @@ export function legacySvg(family: string, e: Ending): string {
     const nl = lines(note, 120, y + 32, 23, W - 240, { max: 4, fill: '#2a2118' })
     parts.push(nl.svg)
   }
-  parts.push(`<text x="${W / 2}" y="${H - 70}" text-anchor="middle" font-size="22" letter-spacing="4" fill="#2a2118">INHERITANCE · THREE GENERATIONS</text>`)
+  parts.push(`<text x="${W / 2}" y="${H - 70}" text-anchor="middle" font-size="22" letter-spacing="4" fill="#2a2118">INHERITANCE · THREE GENERATIONS${opts.demo ? ' · FREE DEMO' : ''}</text>`)
   parts.push(`<text x="${W / 2}" y="${H - 44}" text-anchor="middle" font-size="16" fill="#6a5a46">A fictional town in a fictional era.</text>`)
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" font-family="'Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif" role="img" aria-label="Legacy card for the ${esc(family)} family">${parts.join('')}</svg>`
 }
@@ -113,4 +119,17 @@ export async function svgToPngBlob(svg: string): Promise<Blob> {
   if (!ctx) throw new Error('Canvas is not available')
   ctx.drawImage(img, 0, 0, W, H)
   return await new Promise<Blob>((res, rej) => canvas.toBlob((b) => (b ? res(b) : rej(new Error('PNG export failed'))), 'image/png'))
+}
+
+/** Render the card to PNG and trigger a browser download. */
+export async function savePng(svg: string, filename: string): Promise<void> {
+  const blob = await svgToPngBlob(svg)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 2000)
 }

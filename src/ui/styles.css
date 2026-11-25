@@ -201,6 +201,12 @@ details > summary { cursor: pointer; font-family: var(--sans); font-weight: 600;
   .event-head h2 { font-size: 1.25rem; }
   .actions .btn { flex: 1 1 100%; justify-content: center; }
 }
+.demo-note { border: 1.5px solid var(--teal); background: rgba(47, 107, 102, 0.08); border-radius: 6px; padding: 9px 12px; font-size: 0.95rem; }
+.demo-grid { display: grid; gap: 18px; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: start; margin-top: 14px; }
+.pick label.locked { cursor: not-allowed; }
+.pick label.locked .opt { opacity: 0.62; background: var(--paper-2); }
+.lock-tag { float: right; font-family: var(--sans); font-size: 0.72rem; font-weight: 700; color: var(--brick); display: inline-flex; gap: 4px; align-items: center; }
+@media (max-width: 760px) { .demo-grid { grid-template-columns: 1fr; } }
 .reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 @media print { .topbar, .btn, .compact-hud { display: none !important; } body { background: #fff; } }

@@ -5,7 +5,10 @@ import { EVENTS } from '../content/events'
 import { AMBITIONS, MARK_LABELS, OBLS, PROPS, STARTS, TOWN } from '../content/catalog'
 import { DECISIONS_PER_GEN, fxChips, optionStatus, phaseOf } from '../engine/engine'
 import { epithetFor, getEnding } from '../engine/endings'
-import { legacySvg, svgDataUrl, svgToPngBlob } from './legacy'
+import { legacySvg, savePng, svgDataUrl } from './legacy'
+import { demoCardEnding } from './demo'
+import { EVENT_LIST } from '../content/events'
+import { DEMO, WISHLIST_URL } from '../config'
 import type { GameState, HeirDir } from '../engine/types'
 
 const PHASE_LABEL = { youth: 'Coming of age', prime: 'The working years', late: 'Later years' }
@@ -139,7 +142,7 @@ export function IntroStage({ g, onBegin }: { g: GameState; onBegin: () => void }
       {first ? <>
         <p>{st.blurb}</p>
         <p><b>{g.char.name}</b> begins with {g.money} coin, {g.char.health} health, {g.char.knowledge} knowledge and {skillsList(g.char.skills)}. {g.props.length ? `The family holds: ${g.props.map((p) => PROPS[p].name).join(', ')}.` : 'The family holds no property.'} {g.debt ? `It owes ${g.debt} to the Lantern Bank.` : ''}</p>
-        <p>You will make {DECISIONS_PER_GEN} decisions for each of three generations. Every choice leaves something behind: property, debt, duties, skills, and consequences that find the next generation. Your family ambition is <b>{ambitionTitle(g.ambitionId)}</b>: {AMBITIONS[g.ambitionId].rule}</p>
+        <p>{DEMO ? `In this demo you make ${DECISIONS_PER_GEN} decisions for generation I, then choose what the next generation inherits.` : `You will make ${DECISIONS_PER_GEN} decisions for each of three generations.`} Every choice leaves something behind: property, debt, duties, skills, and consequences that find the next generation. Your family ambition is <b>{ambitionTitle(g.ambitionId)}</b>: {AMBITIONS[g.ambitionId].rule}</p>
       </> : <>
         <p>Here is how {g.char.name} begins — rebuilt from the way they were raised, not copied from their parent.</p>
         <ul className="notes">{g.char.notes.map((n) => <li key={n}>{n}</li>)}</ul>
@@ -155,7 +158,7 @@ export function IntroStage({ g, onBegin }: { g: GameState; onBegin: () => void }
   )
 }
 
-export function HeirStage({ g, onPick }: { g: GameState; onPick: (d: HeirDir) => void }) {
+export function HeirStage({ g, onPick, demo }: { g: GameState; onPick: (d: HeirDir) => void; demo?: boolean }) {
   const ref = useStageFocus<HTMLHeadingElement>()
   const c = g.past[g.past.length - 1]
   return (
@@ -167,6 +170,7 @@ export function HeirStage({ g, onPick }: { g: GameState; onPick: (d: HeirDir) =>
         {g.debt ? `, ${g.debt} debt` : ''}, {g.props.length ? g.props.map((p) => PROPS[p].name).join(' and ') : 'no property'}
         {g.obl.length ? ` and the duties: ${g.obl.map((o) => OBLS[o].name).join(', ')}` : ''}. Health and knowledge stay with {c.name}: the heir’s are built from how they were raised.
       </p>
+      {demo && <p className="demo-note">In the demo the story pauses once you choose. The next screen shows exactly what the next generation inherits.</p>}
       <div className="heirs">
         {g.heirOptions.map((o) => (
           <button key={o.dir} className="heir" disabled={!o.available} onClick={() => onPick(o.dir)}>
@@ -189,15 +193,7 @@ export function EndingStage({ g, onReplay, onSameFamily, onTitle }: { g: GameSta
   const [msg, setMsg] = useState('')
   const save = async () => {
     try {
-      const blob = await svgToPngBlob(svg)
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `inheritance-${family.toLowerCase()}-line.png`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      setTimeout(() => URL.revokeObjectURL(url), 2000)
+      await savePng(svg, `inheritance-${family.toLowerCase()}-line.png`)
       setMsg('Saved the legacy card as an image.')
     } catch (err) {
       setMsg(`Could not export the image (${(err as Error).message}). You can still right-click the card to save it.`)
@@ -257,5 +253,56 @@ export function EndingStage({ g, onReplay, onSameFamily, onTitle }: { g: GameSta
         </div>
       </div>
     </div>
+  )
+}
+
+export function DemoEndStage({ g, onSameSeed, onNewRun }: { g: GameState; onSameSeed: () => void; onNewRun: () => void }) {
+  const ref = useStageFocus<HTMLHeadingElement>()
+  const family = STARTS[g.startId].family
+  const ending = useMemo(() => demoCardEnding(g), [g])
+  const svg = useMemo(() => legacySvg(family, ending, { demo: true }), [family, ending])
+  const [msg, setMsg] = useState('')
+  const dir = g.char.dir
+  const save = async () => {
+    try {
+      await savePng(svg, `inheritance-${family.toLowerCase()}-generation-1.png`)
+      setMsg('Saved the card as an image.')
+    } catch (err) {
+      setMsg(`Could not export the image (${(err as Error).message}).`)
+    }
+  }
+  return (
+    <article className="card tab rise" data-tab="End of the demo" aria-labelledby="demo-end-title">
+      <div className="eyebrow">{family} family · generation II begins</div>
+      <h2 id="demo-end-title" ref={ref} tabIndex={-1}>This is what {g.char.name} inherits</h2>
+      <p>Your choices in generation I decided the state of the household. Here is what carried forward, and how the heir was rebuilt:</p>
+      <ul className="notes">{g.char.notes.map((n) => <li key={n}>{n}</li>)}</ul>
+      <p>
+        <b>{g.char.name}</b> starts with health <b>{g.char.health}</b>, knowledge <b>{g.char.knowledge}</b>; the family holds{' '}
+        {g.props.length ? g.props.map((p) => PROPS[p].name).join(', ') : 'no property'}, owes {g.debt}, and carries{' '}
+        {g.obl.length ? g.obl.map((o) => OBLS[o].name).join(', ') : 'no standing duties'}.
+        {dir === 'scholar' ? ' A child is sent away to study, and the house is lighter for it.' : dir === 'share' ? ' The estate is divided, so its income is halved for a generation.' : ' One child takes on the house, the trade and everything that comes with them.'}
+      </p>
+      <div className="demo-grid">
+        <img className="legacy-preview" src={svgDataUrl(svg)} alt={`Card for the ${family} family after generation I.`} />
+        <div>
+          <h3>The full game continues</h3>
+          <ul className="notes">
+            <li>Two more generations, with the consequences of earlier choices coming back as events and options</li>
+            <li>Three starting families, four ambitions, {EVENT_LIST.length} events, 12 endings</li>
+            <li>A final family tree with the threads of cause from your own choices</li>
+          </ul>
+          <div className="actions" style={{ justifyContent: 'flex-start' }}>
+            {WISHLIST_URL ? <a className="btn primary" href={WISHLIST_URL} rel="noopener">Wish-list the full game</a> : <span className="chip neu">The full game is not released yet</span>}
+          </div>
+          <div className="actions" style={{ justifyContent: 'flex-start', margin: '6px 0' }}>
+            <button className="btn" onClick={onSameSeed}><Icon name="dice" size={18} />Same seed, choose differently</button>
+            <button className="btn" onClick={onNewRun}>New run</button>
+            <button className="btn" onClick={save}><Icon name="download" size={18} />Save card (PNG)</button>
+          </div>
+          <p className="small" role="status">{msg}</p>
+        </div>
+      </div>
+    </article>
   )
 }
