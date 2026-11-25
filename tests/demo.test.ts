@@ -64,5 +64,6 @@ describe('landing page', () => {
     expect(html.match(/<h1/g)?.length).toBe(1)
     expect(html).toContain('<html lang="en">')
     expect(html).toContain('{{WISHLIST_BUTTON}}')
+    expect(html).toContain('{{PRIVACY_TEXT}}')
   })
 })
