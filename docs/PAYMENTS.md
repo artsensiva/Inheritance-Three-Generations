@@ -24,6 +24,8 @@ With `PAYMENT_LINK_URL` set, `npm run build:site` adds:
 
 `LEGAL_DETAILS` fields: `name`, `street`, `postalCity`, `country` (default Germany), `email`, optional `phone`, optional `vatId`, `smallBusiness` (`true` = no VAT under § 19 UStG, `false` = prices include VAT), `disputeResolution` (`"willing"` or `"unwilling"` to take part before a consumer arbitration board), `deliveryHost` (who hosts the download, e.g. `"itch.io"`). The Impressum is public by law, so these values end up on the public site anyway.
 
+`LEGAL_DETAILS` also works on its own, without a payment link: the site then gets just the Impressum and privacy pages (see `docs/PRODUCTION.md`).
+
 Anything missing is rendered as a yellow `[[PLACEHOLDER]]` on a page marked "Draft template". **The build fails** if the payment link is set and any placeholder is left, so the site cannot go live with a checkout button next to unfinished legal text.
 
 ## Preview it locally with placeholders

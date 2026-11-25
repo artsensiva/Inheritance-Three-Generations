@@ -112,6 +112,18 @@ function parseLegal(raw: string): LegalDetails {
   }
 }
 
+export interface LegalConfig {
+  legal: LegalDetails
+  allowPlaceholders: boolean
+}
+
+/** Legal pages without a buy flow: enabled by LEGAL_DETAILS alone (Impressum and privacy are needed for a commercial site in Germany even when it only offers a free demo). */
+export function parseLegalConfig(env: Record<string, string | undefined>): LegalConfig | null {
+  const raw = (env.LEGAL_DETAILS ?? '').trim()
+  if (!raw) return null
+  return { legal: parseLegal(raw), allowPlaceholders: (env.ALLOW_PLACEHOLDER_LEGAL ?? '').trim() === '1' }
+}
+
 export function parseShopConfig(env: Record<string, string | undefined>): ShopConfig | null {
   const link = (env.PAYMENT_LINK_URL ?? '').trim()
   if (!link) return null
@@ -145,8 +157,8 @@ export function buyNote(c: ShopConfig): string {
   return `<p class="note buy-note">One-time purchase of a digital product; checkout is hosted by Stripe. ${html(vatNote(c.legal))} Please read the <a href="./withdrawal/">withdrawal information</a> before you buy.</p>`
 }
 
-export function footerLinks(prefix: string): string {
-  return `<nav class="legal-links" aria-label="Legal"><a href="${prefix}impressum/">Impressum</a> · <a href="${prefix}privacy/">Privacy</a> · <a href="${prefix}withdrawal/">Withdrawal</a></nav>`
+export function footerLinks(prefix: string, withWithdrawal: boolean): string {
+  return `<nav class="legal-links" aria-label="Legal"><a href="${prefix}impressum/">Impressum</a> · <a href="${prefix}privacy/">Privacy</a>${withWithdrawal ? ` · <a href="${prefix}withdrawal/">Withdrawal</a>` : ''}</nav>`
 }
 
 export interface PageSpec {
@@ -163,8 +175,8 @@ function addressBlock(l: LegalDetails): string {
   return `<p>${html(l.name)}<br>${html(l.street)}<br>${html(l.postalCity)}<br>${html(l.country)}</p>`
 }
 
-export function shopPages(c: ShopConfig, opts: { analyticsHost: string | null }): PageSpec[] {
-  const l = c.legal
+export function legalPages(l: LegalDetails, opts: { analyticsHost: string | null; shop: ShopConfig | null }): PageSpec[] {
+  const shop = opts.shop
   const contact = `<p>Email: ${html(l.email)}${l.phone ? `<br>Phone: ${html(l.phone)}` : ''}</p>`
   const impressum = `
 <h1>Impressum</h1>
@@ -172,16 +184,16 @@ export function shopPages(c: ShopConfig, opts: { analyticsHost: string | null })
 <h2>Provider</h2>${addressBlock(l)}
 <h2>Contact</h2>${contact}
 ${l.vatId ? `<h2>VAT ID</h2><p>${html(l.vatId)}</p>` : ''}
-${l.smallBusiness === true ? '<p>No VAT is charged because of the small-business scheme (§ 19 UStG).</p>' : ''}
+${shop && l.smallBusiness === true ? '<p>No VAT is charged because of the small-business scheme (§ 19 UStG).</p>' : ''}
 <h2>Responsible for content (§ 18 (2) MStV)</h2>${addressBlock(l)}
-<h2>Consumer dispute resolution</h2>
+${shop ? `<h2>Consumer dispute resolution</h2>
 <p>${
     l.disputeResolution === 'willing'
       ? 'We are willing to take part in dispute resolution proceedings before a consumer arbitration board.'
       : l.disputeResolution === 'unwilling'
         ? 'We are neither willing nor obliged to take part in dispute resolution proceedings before a consumer arbitration board.'
         : html('[[DISPUTE RESOLUTION: set disputeResolution to "willing" or "unwilling"]]')
-  }</p>`
+  }</p>` : ''}`
 
   const analytics = opts.analyticsHost
     ? `<p>We count visits with an analytics service (${html(opts.analyticsHost)}) to see how many people visit and which page they open. It is not loaded if your browser sends Do Not Track or Global Privacy Control. The service is meant to work without cookies; see its own privacy statement for details. Legal basis: Art. 6 (1)(f) GDPR (our interest in understanding how the site is used).</p>`
@@ -191,16 +203,16 @@ ${l.smallBusiness === true ? '<p>No VAT is charged because of the small-business
 <p class="note">Information under Art. 13 GDPR.</p>
 <h2>Who is responsible</h2>${addressBlock(l)}${contact}
 <h2>The game</h2>
-<p>The game runs in your browser. Your progress is saved only in your browser's local storage on your own device; it is never sent to us.</p>
+<p>The game runs in your browser. Your progress is saved only in your browser's local storage on your own device; it is never sent to us.${shop ? '' : ' We do not collect contact details or any other data from players.'}</p>
 <h2>Hosting and server logs</h2>
 <p>This site is served by GitHub Pages (GitHub, Inc., a Microsoft company, USA). When you open a page, your IP address and technical request data are processed by the host to deliver the page and keep it secure. Legal basis: Art. 6 (1)(f) GDPR. Data may be transferred to the USA; see GitHub's privacy statement.</p>
 <h2>Visit statistics</h2>${analytics}
-<h2>Buying the full game</h2>
+${shop ? `<h2>Buying the full game</h2>
 <p>If you buy, you leave this site for Stripe's hosted checkout. Payments are processed by Stripe Payments Europe, Ltd., Dublin, Ireland. Stripe collects the data you enter (such as name, email address, billing address and payment details) and technical data such as your IP address. We receive your name, email address, billing country, and the details of the order, but not your full card or bank details. We use them to process the order, send you the product, issue the receipt, and keep the records required by law. Legal basis: Art. 6 (1)(b) and (c) GDPR. Stripe also processes some data for its own purposes, such as fraud prevention and legal obligations, as an independent controller; see Stripe's privacy policy.</p>
 <h2>Delivery</h2>
 <p>${l.deliveryHost ? `The download file is provided through ${html(l.deliveryHost)}, which can see your IP address and the request when you download. See that service's privacy statement.` : html('[[DELIVERY HOST: set deliveryHost to the service that hosts the download file]]')}</p>
 <h2>How long we keep data</h2>
-<p>We delete order data when it is no longer needed, except where statutory retention periods under German commercial and tax law require us to keep it.</p>
+<p>We delete order data when it is no longer needed, except where statutory retention periods under German commercial and tax law require us to keep it.</p>` : ''}
 <h2>Your rights</h2>
 <p>You have the right to access, rectification, erasure, restriction of processing, data portability and objection under the GDPR, and the right to complain to a data protection supervisory authority, for example the one responsible for your place of residence or ours. Contact us using the details above.</p>`
 
@@ -221,26 +233,31 @@ ${l.smallBusiness === true ? '<p>No VAT is charged because of the small-business
 <h1>Thank you</h1>
 <p>If you have just bought <b>Inheritance: Three Generations</b>, thank you for supporting a small independent game. Stripe emails a receipt to the address you gave at checkout.</p>
 <h2>Your download</h2>
-${c.downloadUrl ? `<p><a class="btn primary" href="${escapeHtml(c.downloadUrl)}" rel="noopener">Download the full game</a></p>` : `<p>${html('[[DOWNLOAD LINK: set DOWNLOAD_URL for the build buyers receive]]')}</p>`}
+${shop?.downloadUrl ? `<p><a class="btn primary" href="${escapeHtml(shop.downloadUrl)}" rel="noopener">Download the full game</a></p>` : `<p>${html('[[DOWNLOAD LINK: set DOWNLOAD_URL for the build buyers receive]]')}</p>`}
 <p class="note">Keep this link for yourself. If it does not work, write to ${html(l.email)} and include the email address you used at checkout.</p>
 <h2>Questions or refunds</h2>
 <p>Contact ${html(l.email)}. Details on cancelling a purchase are in the <a href="../withdrawal/">withdrawal information</a>.</p>
 <p><a href="../play/">Back to the free demo</a> · <a href="../">Home</a></p>`
 
-  return [
+  const pages: PageSpec[] = [
     { dir: 'impressum', title: 'Impressum', description: 'Legal notice for Inheritance: Three Generations.', robots: 'index', body: impressum },
-    { dir: 'privacy', title: 'Privacy', description: 'How this site and the purchase flow handle personal data.', robots: 'index', body: privacy },
-    { dir: 'withdrawal', title: 'Withdrawal', description: 'Right of withdrawal for the digital product.', robots: 'index', body: withdrawal },
-    { dir: 'thanks', title: 'Thank you', description: 'Purchase confirmation and download.', robots: 'noindex', body: thanks },
+    { dir: 'privacy', title: 'Privacy', description: 'How this site handles personal data.', robots: 'index', body: privacy },
   ]
+  if (shop) {
+    pages.push(
+      { dir: 'withdrawal', title: 'Withdrawal', description: 'Right of withdrawal for the digital product.', robots: 'index', body: withdrawal },
+      { dir: 'thanks', title: 'Thank you', description: 'Purchase confirmation and download.', robots: 'noindex', body: thanks },
+    )
+  }
+  return pages
 }
 
-export function renderPage(shell: string, p: PageSpec): string {
+export function renderPage(shell: string, p: PageSpec, footer: string): string {
   const body = findPlaceholders(p.body).length ? `${draftBanner}\n${p.body}` : p.body
   return shell
     .replace('{{TITLE}}', `${escapeHtml(p.title)} — Inheritance: Three Generations`)
     .replace('{{DESCRIPTION}}', escapeHtml(p.description))
     .replace('{{ROBOTS}}', p.robots === 'noindex' ? 'noindex, nofollow' : 'index, follow')
     .replace('{{BODY}}', body)
-    .replace('{{FOOTER_LINKS}}', footerLinks('../'))
+    .replace('{{FOOTER_LINKS}}', footer)
 }

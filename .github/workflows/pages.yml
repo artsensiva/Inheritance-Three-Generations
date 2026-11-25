@@ -35,9 +35,12 @@ jobs:
           VITE_WISHLIST_URL: ${{ vars.WISHLIST_URL }}
           # Optional buy flow (Stripe Payment Link); see docs/PAYMENTS.md. Unset = no buy button, no legal pages.
           # With PAYMENT_LINK_URL set, the build fails until LEGAL_DETAILS and the price are complete.
+          # Public address, for canonical links and sitemap.xml (set the SITE_URL variable if you use a custom domain).
+          SITE_URL: ${{ vars.SITE_URL || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
           PAYMENT_LINK_URL: ${{ vars.PAYMENT_LINK_URL }}
           PRICE_LABEL: ${{ vars.PRICE_LABEL }}
           DOWNLOAD_URL: ${{ vars.DOWNLOAD_URL }}
+          # LEGAL_DETAILS alone adds Impressum and privacy pages (needed in Germany even without payments).
           LEGAL_DETAILS: ${{ vars.LEGAL_DETAILS }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5

@@ -43,3 +43,4 @@ mark.ph { background:#ffd966; color:#2a2118; padding:0 .25em; border-radius:3px;
 .legal-links { display:block; margin-top:6px; }
 .legal-links a { color:inherit; }
 .buy-note { max-width:560px; margin:0 auto 6px; text-align:center; }
+.self-center { align-self:center; }
