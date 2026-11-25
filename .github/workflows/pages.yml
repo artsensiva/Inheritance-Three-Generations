@@ -27,6 +27,12 @@ jobs:
       - run: npm ci
       - name: Build landing page and free demo
         run: npm run build:site
+        env:
+          # Optional repository variables (Settings → Secrets and variables → Actions → Variables).
+          # Public values only; see docs/ANALYTICS.md. Unset = no analytics.
+          ANALYTICS_SCRIPT_SRC: ${{ vars.ANALYTICS_SCRIPT_SRC }}
+          ANALYTICS_ATTRS: ${{ vars.ANALYTICS_ATTRS }}
+          VITE_WISHLIST_URL: ${{ vars.WISHLIST_URL }}
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:
