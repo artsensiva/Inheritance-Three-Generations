@@ -13,13 +13,22 @@ Requires Node 22.12+ (developed on Node 24, npm 11; see `.nvmrc`).
 ```bash
 npm ci             # or npm install
 npm run dev        # development server at http://localhost:5173
-npm test           # 26 engine/content/save tests (about 20 s)
+npm test           # 31 engine/content/save/demo tests (about 20 s)
 npm run simulate   # bot simulation across seeds (pass a number for runs per cell, default 300)
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/ at http://localhost:4173
+npm run dev:demo   # run the free demo in development
+npm run build:site # landing page + free demo into site/ (static, deployable anywhere)
 ```
 
 The production build in `dist/` is a static site (about 349 KB JS, 13 KB CSS, no runtime network access, no remote fonts). Serve it with any static server. Opening `dist/index.html` directly with `file://` does not work in Chromium-based browsers because module scripts are blocked; use `npm run preview` or any static host.
+
+## Free demo and landing page
+
+* **Demo:** a build-time mode (`VITE_DEMO=true`, set in `.env.demo`). One family (the Marlow Cooperage), generation I with its 7 decisions, then the heir decision. The demo ends on a screen that shows exactly what the next generation inherits, a "story so far" card (PNG) and a replay with the same seed. Demo saves use a separate storage key from the full game.
+* **Landing page:** `landing/index.html` and `landing/landing.css`, plain static files with no scripts, forms or third-party requests (a test enforces this). `npm run build:site` writes the deployable site to `site/`: landing page at `/`, demo at `/play/`, and an example legacy card generated from a real simulated run.
+* **Wish-list link:** set `VITE_WISHLIST_URL=https://…` when building to show a wish-list button on the landing page and the demo end screen. Until a store page exists it says that the full game is not released yet. Nothing is uploaded or published by these scripts.
+* Neither collects data. Measuring sign-ups or conversion would need a separate decision (see `docs/LAUNCH.md`).
 
 ## What the game is
 
@@ -84,7 +93,7 @@ Events are plain objects in `src/content/events_*.ts`. A minimal event:
 
 ## Verification actually performed
 
-* **Automated tests:** 26 pass (`npm test`): content validation and scope; no soft-locks at the worst resources for every event; determinism; resource bounds and termination across 240 random runs; inheritance rules (health not copied, steward/scholar/share, skills, upbringing flags, orphan opening after early death); delayed consequences naming their cause; ending explanations quote only recorded history; each ambition reachable from each start; random play cannot trivially win; save round-trip and continuation equivalence; corrupt, wrong-version, tampered and throwing storage.
+* **Automated tests:** 31 pass (`npm test`): content validation and scope; no soft-locks at the worst resources for every event; determinism; resource bounds and termination across 240 random runs; inheritance rules (health not copied, steward/scholar/share, skills, upbringing flags, orphan opening after early death); delayed consequences naming their cause; ending explanations quote only recorded history; each ambition reachable from each start; random play cannot trivially win; save round-trip and continuation equivalence; corrupt, wrong-version, tampered and throwing storage.
 * **Simulation** (`npm run simulate 120`, 10,080 bot runs): all runs terminated (max 50 steps); every one of the 60 events was reached; all 2,144 consequences that could be scheduled (target generation 1–3) arrived (a separate run of 900 bot runs). Ambition success rates by strategy (the "ambition" oracle bot): Roots 49 %, Open Book 43 %, Full Table 52 %, Town's Name 24 %; random play: 0–6 % on Roots/Open Book/Town's Name and 17 % on Full Table. Each greedy single-resource strategy (money, knowledge, bonds, health) reaches 40 % or more on at most one ambition. Early deaths occurred in 0.9 % of runs. These bots exercise the rules; they do **not** show that the game is fun.
 * **Real browser (Chromium, built-in preview):** full runs played start to ending through the actual UI; new run, keyboard choice (key 2), save then reload then Continue (state identical), corrupted save handling (notice shown, bad save set aside), generation transition, ledger, heir choice, ending, PNG export (218 KB `image/png` produced), replay buttons; desktop and a 375 px mobile viewport (no horizontal scroll, sticky resource bar).
 * **Accessibility:** automated axe-core scan on the title, setup, intro, event, result, ledger, heir, ending, history and how-to screens: 0 violations after fixes (the library was installed temporarily and removed). Not done: a manual screen-reader pass.
@@ -92,6 +101,8 @@ Events are plain objects in `src/content/events_*.ts`. A minimal event:
 
 ## Known issues and limitations
 
+* The demo length (roughly 6–8 minutes) is an estimate from word counts, not measured with players.
+* The landing page was checked in Chromium at desktop and 375 px width (no horizontal scroll, no external requests); it has not been tested elsewhere.
 * **No human playtest has been done.** Balance comes from bots; fun, clarity of wording and pacing are untested with people. The Tarn Tenancy is deliberately the hardest start and has the lowest ambition success rates.
 * Writing is AI-assisted and was edited for consistency by reading full-run transcripts (`npx tsx scripts/transcript.ts <seed> <start> <ambition> <policy>` prints a full run), not tested across all combinations.
 * Delayed consequences scheduled for "the next generation" by a generation-3 choice cannot occur (there is no generation 4); the choice chip still says it may come back. Several events share the same shape (pay coin, pay health, or take a free option).
