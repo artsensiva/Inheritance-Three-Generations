@@ -2,6 +2,7 @@
   "name": "inheritance-three-generations",
   "version": "0.1.0",
   "private": true,
+  "license": "UNLICENSED",
   "type": "module",
   "description": "Inheritance: Three Generations \u2014 a single-player card strategy game about a family across three generations.",
   "scripts": {
