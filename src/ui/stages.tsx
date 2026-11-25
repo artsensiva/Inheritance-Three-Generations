@@ -8,7 +8,7 @@ import { epithetFor, getEnding } from '../engine/endings'
 import { legacySvg, savePng, svgDataUrl } from './legacy'
 import { demoCardEnding } from './demo'
 import { EVENT_LIST } from '../content/events'
-import { DEMO, WISHLIST_URL } from '../config'
+import { BUY_PRICE, BUY_URL, DEMO, WISHLIST_URL } from '../config'
 import type { GameState, HeirDir } from '../engine/types'
 
 const PHASE_LABEL = { youth: 'Coming of age', prime: 'The working years', late: 'Later years' }
@@ -293,7 +293,13 @@ export function DemoEndStage({ g, onSameSeed, onNewRun }: { g: GameState; onSame
             <li>A final family tree with the threads of cause from your own choices</li>
           </ul>
           <div className="actions" style={{ justifyContent: 'flex-start' }}>
-            {WISHLIST_URL ? <a className="btn primary" href={WISHLIST_URL} rel="noopener">Wish-list the full game</a> : <span className="chip neu">The full game is not released yet</span>}
+            {BUY_URL ? (
+              <a className="btn primary" href={BUY_URL} rel="noopener">Buy the full game{BUY_PRICE ? ` · ${BUY_PRICE}` : ''}</a>
+            ) : WISHLIST_URL ? (
+              <a className="btn primary" href={WISHLIST_URL} rel="noopener">Wish-list the full game</a>
+            ) : (
+              <span className="chip neu">The full game is not released yet</span>
+            )}
           </div>
           <div className="actions" style={{ justifyContent: 'flex-start', margin: '6px 0' }}>
             <button className="btn" onClick={onSameSeed}><Icon name="dice" size={18} />Same seed, choose differently</button>

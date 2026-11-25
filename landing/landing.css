@@ -33,3 +33,13 @@ th { background:var(--paper-2); }
 footer { border-top:2px solid var(--ink); margin-top:20px; padding:18px 0 40px; font-family:var(--sans); font-size:.85rem; color:var(--ink-3); }
 @media (max-width:760px) { .two { grid-template-columns:1fr; } .actions .btn { flex:1 1 100%; justify-content:center; } }
 @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+.prose { max-width:720px; margin:0 auto; padding:18px 0 30px; }
+.prose h1 { font-size:clamp(1.8rem,5vw,2.5rem); margin-top:.2em; }
+.prose h2 { margin-top:1.4em; font-size:1.25rem; }
+.prose p { margin:.6em 0; }
+header.site .home { color:inherit; text-decoration:none; }
+mark.ph { background:#ffd966; color:#2a2118; padding:0 .25em; border-radius:3px; font-family:var(--sans); font-size:.9em; }
+.draft { background:#fff3cd; border:2px solid #b5791d; border-radius:6px; padding:10px 14px; font-family:var(--sans); font-size:.9rem; }
+.legal-links { display:block; margin-top:6px; }
+.legal-links a { color:inherit; }
+.buy-note { max-width:560px; margin:0 auto 6px; text-align:center; }

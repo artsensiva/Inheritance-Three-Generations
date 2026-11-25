@@ -67,10 +67,12 @@ export function injectLoader(html: string, loaderPath: string): string {
   return html.replace('</head>', `  <script defer src="${loaderPath}"></script>\n</head>`)
 }
 
-export function privacyParagraph(cfg: AnalyticsConfig | null): string {
+export function privacyParagraph(cfg: AnalyticsConfig | null, payments = false): string {
   const base = 'Progress is saved only in your own browser, on your own device.'
-  if (!cfg) return `The game has no accounts, no tracking and no cookies. ${base} This page loads nothing from other websites.`
-  return `The game has no accounts and this site sets no cookies. ${base} We count visits with an analytics service (${cfg.host}), only to see how many people visit and which page they open. It is not loaded if your browser sends Do Not Track or Global Privacy Control.`
+  // Buying sends the visitor to Stripe; the sentence must appear whenever the buy button exists.
+  const pay = payments ? ' If you buy the game, you leave this site for the hosted checkout of Stripe; see the <a href="./privacy/">privacy information</a>.' : ''
+  if (!cfg) return `The game has no accounts, no tracking and no cookies. ${base} This page loads nothing from other websites.${pay}`
+  return `The game has no accounts and this site sets no cookies. ${base} We count visits with an analytics service (${cfg.host}), only to see how many people visit and which page they open. It is not loaded if your browser sends Do Not Track or Global Privacy Control.${pay}`
 }
 
 export function demoPrivacyNote(cfg: AnalyticsConfig | null): string {

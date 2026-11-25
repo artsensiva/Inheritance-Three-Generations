@@ -14,7 +14,7 @@ Everything here is a hypothesis to test, not a forecast. No demand for the game 
 5. **Steam** only if the earlier steps hold up: a $100 app fee per title (recoupable after $1,000 in sales, per Steamworks), a "coming soon" page to build wish-lists, desktop packaging, age-rating and tax forms.
 
 ## Payments
-Do not build payments into the game. Use the checkout of the store you sell through. The owner needs bank and tax details, possibly a registered business, and must confirm that each platform pays out to their country.
+Do not build payments into the game. Use the checkout of the store you sell through. The site has an optional Stripe Payment Link flow (buy button, thank-you page, legal page templates), off by default; see `docs/PAYMENTS.md`. The owner needs bank and tax details, possibly a registered business, and must confirm that each platform pays out to their country.
 
 ## Open decisions for the owner
 * Country and payment channel; budget cap for any ad spend.
