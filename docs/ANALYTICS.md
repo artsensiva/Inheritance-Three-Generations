@@ -27,11 +27,31 @@ gh workflow run "Deploy site to GitHub Pages"
 
 To turn it off again: `gh variable delete ANALYTICS_SCRIPT_SRC` and redeploy.
 
-## Choosing a provider
-Pick one that is cookieless and does not store personal data on the visitor's device. Reports below come from third-party reviews found in a quick search, not from the providers' own pricing pages, so **check current terms and prices yourself**:
+## GoatCounter (the chosen provider)
+Verified from GoatCounter's own documentation (goatcounter.com/help/start) and terms (goatcounter.com/help/terms) on 2026-11-25:
+* The official snippet is `<script data-goatcounter="https://MYCODE.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>`. In this project that maps to:
+  * `ANALYTICS_SCRIPT_SRC` = `https://gc.zgo.at/count.js`
+  * `ANALYTICS_ATTRS` = `{"data-goatcounter":"https://MYCODE.goatcounter.com/count"}`
+* **Commercial use:** the terms say the hosted service "is currently offered for free for reasonable public usage" and that running a personal website *or small-to-medium business* on it is fine, but sending millions of pageviews a day is not. (Third-party reviews I found earlier described the free tier as non-commercial only; the official terms say otherwise. Terms can change, so re-read them before relying on this.) The terms also put the responsibility for following local data-protection law (for example GDPR) on you.
+* Ad blockers commonly block `goatcounter.com` and `gc.zgo.at`, so counts will be lower than real visits.
+* Pageviews are recorded per path. On GitHub Pages the paths include the repository prefix (`/Inheritance-Three-Generations/` for the landing page and `/Inheritance-Three-Generations/play/` for the demo).
+
+### Setup
+1. **You** create the account at https://www.goatcounter.com/signup (choose a site code, which becomes `MYCODE.goatcounter.com`). Accounts, e-mail and password are yours; I do not create them or enter your password.
+2. Give the site code to whoever configures the repository, or run:
+
+```bash
+gh variable set ANALYTICS_SCRIPT_SRC --body "https://gc.zgo.at/count.js"
+gh variable set ANALYTICS_ATTRS --body '{"data-goatcounter":"https://MYCODE.goatcounter.com/count"}'
+gh workflow run "Deploy site to GitHub Pages"
+```
+
+3. Open the live site, wait about 10 seconds and check the GoatCounter dashboard. To keep your own visits out, see GoatCounter's "Prevent tracking my own pageviews?" help page.
+
+## Other providers
+Any cookieless provider that loads a single script with `data-*` attributes works with the same two variables. Notes below come from third-party reviews, not the providers' own pricing pages, so check current terms and prices yourself:
 * *Umami Cloud*: a free Hobby tier is reported (about 100,000 events a month on one website, 6 months of data). Script from `cloud.umami.is` with a `data-website-id` UUID. Also self-hostable.
 * *Plausible*: paid, reported from about $9 a month, with a trial and no free plan. Script with a `data-domain` attribute.
-* *GoatCounter*: the hosted free tier is reported as non-commercial only, with conflicting reports of commercial prices; self-hosting is free. Because this is a commercial game, read its terms before using the free tier.
 
 ## Legal note
 This is not legal advice. Whether a cookieless counter needs consent or a notice depends on your jurisdiction and provider. The site already names the analytics host in its privacy text and honours Do Not Track and Global Privacy Control; a lawyer or the provider's compliance documentation should confirm it is enough for where you operate.
