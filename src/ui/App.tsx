@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Icon } from './icons'
 import { CompactHud, DeltaChips, Hud, ROMAN, useStageFocus } from './parts'
 import { DemoEndStage, EndingStage, EventStage, HeirStage, IntroStage, LedgerStage, ResultStage } from './stages'
-import { DEMO, DEMO_FAMILY } from '../config'
+import { ANALYTICS_HOST, DEMO, DEMO_FAMILY } from '../config'
 import { isDemoComplete } from './demo'
 import { AMBITIONS, OBLS, PROPS, STARTS, TOWN } from '../content/catalog'
 import { advance, choose, chooseHeir, newGame } from '../engine/engine'
@@ -168,7 +168,7 @@ function Title({ saved, onNew, onContinue, onHow }: { saved: { state: GameState;
         <button className={`btn ${saved ? '' : 'primary'}`} onClick={onNew}>New run</button>
         <button className="btn ghost" onClick={onHow}>How to play</button>
       </div>
-      <p className="legal">A fictional town in a fictional era. This is a strategy game, not a model of real lives or real statistics. {DEMO ? 'The demo takes roughly 6–8 minutes.' : 'Runs take about 15–25 minutes.'} Progress is saved in this browser only.</p>
+      <p className="legal">A fictional town in a fictional era. This is a strategy game, not a model of real lives or real statistics. {DEMO ? 'The demo takes roughly 6–8 minutes.' : 'Runs take about 15–25 minutes.'} Progress is saved in this browser only.{ANALYTICS_HOST ? ` Visits to this site are counted with an analytics service (${ANALYTICS_HOST}) unless your browser sends Do Not Track or Global Privacy Control.` : ''}</p>
     </section>
   )
 }

@@ -3,6 +3,7 @@
  *   site/index.html, landing.css, sample-card.svg   — the landing page
  *   site/play/                                      — the free demo build
  * Optional: VITE_WISHLIST_URL=https://… adds a wish-list button (landing page and demo end screen).
+ * Optional: ANALYTICS_SCRIPT_SRC (+ ANALYTICS_ATTRS) adds privacy-conscious visit analytics; see docs/ANALYTICS.md.
  * Nothing is uploaded or published by this script.
  */
 import { execSync } from 'node:child_process'
@@ -11,13 +12,18 @@ import { playRun } from '../src/engine/bots'
 import { getEnding } from '../src/engine/endings'
 import { legacySvg } from '../src/ui/legacy'
 import { STARTS } from '../src/content/catalog'
+import { analyticsLoader, injectLoader, parseAnalyticsConfig, privacyParagraph } from './analytics'
 
 const out = 'site'
+const analytics = parseAnalyticsConfig(process.env)
 rmSync(out, { recursive: true, force: true })
 mkdirSync(out, { recursive: true })
 
 console.log('Building the demo into site/play …')
-execSync(`npx vite build --mode demo --outDir ${out}/play --emptyOutDir`, { stdio: 'inherit' })
+execSync(`npx vite build --mode demo --outDir ${out}/play --emptyOutDir`, {
+  stdio: 'inherit',
+  env: { ...process.env, VITE_ANALYTICS_HOST: analytics?.host ?? '' },
+})
 
 // Example legacy card: first deterministic run that illustrates the game well and fulfils its ambition (real engine output).
 let svg = ''
@@ -39,7 +45,16 @@ const url = (process.env.VITE_WISHLIST_URL ?? '').trim()
 const button = url
   ? `<a class="btn" href="${url.replace(/"/g, '&quot;')}" rel="noopener">Wish-list the full game</a>`
   : '<span class="note" style="align-self:center">The full game is not released yet.</span>'
-const html = readFileSync('landing/index.html', 'utf8').replace('{{WISHLIST_BUTTON}}', button)
+let html = readFileSync('landing/index.html', 'utf8').replace('{{WISHLIST_BUTTON}}', button).replace('{{PRIVACY_TEXT}}', privacyParagraph(analytics))
+if (analytics) {
+  writeFileSync(`${out}/analytics.js`, analyticsLoader(analytics))
+  html = injectLoader(html, './analytics.js')
+  const playPath = `${out}/play/index.html`
+  writeFileSync(playPath, injectLoader(readFileSync(playPath, 'utf8'), '../analytics.js'))
+  console.log(`Analytics enabled (${analytics.host}); skipped for Do Not Track / Global Privacy Control.`)
+} else {
+  console.log('Analytics: none (ANALYTICS_SCRIPT_SRC not set).')
+}
 writeFileSync(`${out}/index.html`, html)
 cpSync('landing/landing.css', `${out}/landing.css`)
 console.log('Site ready in ./site')
