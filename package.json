@@ -10,7 +10,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "simulate": "tsx scripts/simulate.ts"
+    "simulate": "tsx scripts/simulate.ts",
+    "dev:demo": "vite --mode demo",
+    "build:demo": "tsc --noEmit && vite build --mode demo --outDir dist-demo --emptyOutDir",
+    "build:site": "tsx scripts/build-site.ts"
   },
   "dependencies": {
     "react": "^19.3.1",

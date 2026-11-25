@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Icon } from './icons'
 import { CompactHud, DeltaChips, Hud, ROMAN, useStageFocus } from './parts'
-import { EndingStage, EventStage, HeirStage, IntroStage, LedgerStage, ResultStage } from './stages'
+import { DemoEndStage, EndingStage, EventStage, HeirStage, IntroStage, LedgerStage, ResultStage } from './stages'
+import { DEMO, DEMO_FAMILY } from '../config'
+import { isDemoComplete } from './demo'
 import { AMBITIONS, OBLS, PROPS, STARTS, TOWN } from '../content/catalog'
 import { advance, choose, chooseHeir, newGame } from '../engine/engine'
-import { clearSave, readSave, writeSave, type StorageLike } from '../engine/save'
+import { DEMO_SAVE_KEY, SAVE_KEY, clearSave, readSave, writeSave, type StorageLike } from '../engine/save'
 import type { GameState, HeirDir } from '../engine/types'
 
 type Screen = 'title' | 'setup' | 'game'
@@ -21,6 +23,7 @@ function safeStorage(): StorageLike | null {
   }
 }
 const storage = safeStorage()
+const KEY = DEMO ? DEMO_SAVE_KEY : SAVE_KEY
 const SETTINGS_KEY = 'inheritance.settings.v1'
 
 function loadSettings(): { reduceMotion: boolean } {
@@ -54,7 +57,7 @@ export default function App() {
 
   useEffect(() => {
     if (!storage) { setNotice('This browser is blocking local storage, so progress cannot be saved. You can still play.'); return }
-    const r = readSave(storage)
+    const r = readSave(storage, KEY)
     if (r.ok) setSaved({ state: r.state, savedAt: r.savedAt })
     else if (r.reason === 'invalid') setNotice(r.message)
   }, [])
@@ -66,12 +69,13 @@ export default function App() {
 
   useEffect(() => {
     if (!game || !storage) return
-    if (!writeSave(storage, game)) setNotice('Could not save progress (storage is full or unavailable).')
+    if (!writeSave(storage, game, Date.now(), KEY)) setNotice('Could not save progress (storage is full or unavailable).')
   }, [game])
 
   const start = useCallback((startId: string, ambitionId: string, seed?: number) => {
-    const g = newGame(seed ?? randomSeed(), startId, ambitionId)
-    setGame(g); setIntroSeen(0); setScreen('game'); setLast({ startId, ambitionId })
+    const sid = DEMO ? DEMO_FAMILY : startId
+    const g = newGame(seed ?? randomSeed(), sid, ambitionId)
+    setGame(g); setIntroSeen(0); setScreen('game'); setLast({ startId: sid, ambitionId })
   }, [])
 
   const doChoose = useCallback((id: string) => {
@@ -87,7 +91,7 @@ export default function App() {
     setScreen('game')
   }
   const toTitle = () => {
-    if (game && storage && game.phase === 'ended') { clearSave(storage); setSaved(null) }
+    if (game && storage && game.phase === 'ended') { clearSave(storage, KEY); setSaved(null) }
     else if (game) setSaved({ state: game, savedAt: Date.now() })
     setScreen('title')
   }
@@ -97,7 +101,7 @@ export default function App() {
       <a className="skip" href="#main">Skip to the game</a>
       <header className="topbar">
         {screen !== 'title' && <h1 className="sr-only">Inheritance: Three Generations</h1>}
-        <div className="brand"><span className="mark"><Icon name="tree" size={18} /></span>Inheritance <span className="small">· Three Generations</span></div>
+        <div className="brand"><span className="mark"><Icon name="tree" size={18} /></span>Inheritance <span className="small">· Three Generations{DEMO ? ' · Free demo' : ''}</span></div>
         {screen === 'game' && game && <>
           <nav className="gen-pips" aria-label="Generations">
             {[1, 2, 3].map((n) => <span key={n} className={`gen-pip ${n < game.gen || game.phase === 'ended' ? 'done' : ''}`} aria-current={n === game.gen && game.phase !== 'ended' ? 'step' : undefined}>Gen {ROMAN[n - 1]}</span>)}
@@ -124,11 +128,12 @@ export default function App() {
               <CompactHud g={game} />
               <div className="layout">
                 <div key={`${game.gen}-${game.turn}-${game.phase}-${introSeen === game.gen}`}>
-                  {game.phase === 'choose' && game.turn === 0 && introSeen !== game.gen ? <IntroStage g={game} onBegin={() => setIntroSeen(game.gen)} />
+                  {DEMO && isDemoComplete(game) ? <DemoEndStage g={game} onSameSeed={() => start(game.startId, game.ambitionId, game.seed)} onNewRun={() => setScreen('setup')} />
+                    : game.phase === 'choose' && game.turn === 0 && introSeen !== game.gen ? <IntroStage g={game} onBegin={() => setIntroSeen(game.gen)} />
                     : game.phase === 'choose' ? <EventStage g={game} onChoose={doChoose} />
                     : game.phase === 'result' ? <ResultStage g={game} onContinue={doAdvance} />
                     : game.phase === 'ledger' ? <LedgerStage g={game} onContinue={doAdvance} />
-                    : <HeirStage g={game} onPick={doHeir} />}
+                    : <HeirStage g={game} onPick={doHeir} demo={DEMO} />}
                 </div>
                 <Hud g={game} />
               </div>
@@ -157,19 +162,20 @@ function Title({ saved, onNew, onContinue, onHow }: { saved: { state: GameState;
       <h1 id="t-title" ref={ref} tabIndex={-1}>Inheritance: Three Generations</h1>
       <p className="promise">Make a life for yourself. Discover what your children inherit from your choices.</p>
       <p>Guide one family through three generations of a fictional canal town. Every decision about work, land, debt, learning and loyalty reaches forward to the people who come after you.</p>
+      {DEMO && <p className="demo-note"><b>Free demo.</b> Play the first generation of the Marlow Cooperage family, then decide what the next generation inherits. The full game continues through three generations with three families.</p>}
       <div className="actions">
         {saved && <button className="btn primary" onClick={onContinue}>Continue — {STARTS[saved.state.startId].family} family, generation {ROMAN[saved.state.gen - 1]}</button>}
         <button className={`btn ${saved ? '' : 'primary'}`} onClick={onNew}>New run</button>
         <button className="btn ghost" onClick={onHow}>How to play</button>
       </div>
-      <p className="legal">A fictional town in a fictional era. This is a strategy game, not a model of real lives or real statistics. Runs take about 15–25 minutes. Progress is saved in this browser only.</p>
+      <p className="legal">A fictional town in a fictional era. This is a strategy game, not a model of real lives or real statistics. {DEMO ? 'The demo takes roughly 6–8 minutes.' : 'Runs take about 15–25 minutes.'} Progress is saved in this browser only.</p>
     </section>
   )
 }
 
 function Setup({ onStart, onBack, preset }: { onStart: (s: string, a: string, seed?: number) => void; onBack: () => void; preset: { startId: string; ambitionId: string } | null }) {
   const ref = useStageFocus<HTMLHeadingElement>()
-  const [startId, setStart] = useState(preset?.startId ?? 'cooperage')
+  const [startId, setStart] = useState(DEMO ? DEMO_FAMILY : preset?.startId ?? 'cooperage')
   const [amb, setAmb] = useState(preset?.ambitionId ?? 'roots')
   const [seed, setSeed] = useState('')
   const seedNum = /^\d+$/.test(seed.trim()) ? Number(seed.trim()) : undefined
@@ -181,9 +187,10 @@ function Setup({ onStart, onBack, preset }: { onStart: (s: string, a: string, se
         <legend className="panel-title">Starting situation</legend>
         <div className="pick">
           {Object.values(STARTS).map((s) => (
-            <label key={s.id}>
-              <input type="radio" name="start" value={s.id} checked={startId === s.id} onChange={() => setStart(s.id)} />
+            <label key={s.id} className={DEMO && s.id !== DEMO_FAMILY ? 'locked' : undefined}>
+              <input type="radio" name="start" value={s.id} checked={startId === s.id} disabled={DEMO && s.id !== DEMO_FAMILY} onChange={() => setStart(s.id)} />
               <span className="opt">
+                {DEMO && s.id !== DEMO_FAMILY && <span className="lock-tag"><Icon name="lock" size={13} /> Full game</span>}
                 <b>{s.title}</b>
                 <span style={{ display: 'block' }}>{s.blurb}</span>
                 <ul className="tagrow">
@@ -200,7 +207,7 @@ function Setup({ onStart, onBack, preset }: { onStart: (s: string, a: string, se
         </div>
       </fieldset>
       <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
-        <legend className="panel-title">Family ambition (judged at the end)</legend>
+        <legend className="panel-title">Family ambition {DEMO ? '(shapes your strategy; scored in the full game)' : '(judged at the end)'}</legend>
         <div className="pick">
           {Object.values(AMBITIONS).map((a) => (
             <label key={a.id}>

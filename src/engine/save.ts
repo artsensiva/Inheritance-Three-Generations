@@ -4,7 +4,7 @@ import { STARTS, AMBITIONS } from '../content/catalog'
 
 export const SAVE_VERSION = 1
 export const SAVE_KEY = 'inheritance.save.v1'
-const BACKUP_KEY = 'inheritance.save.invalid'
+export const DEMO_SAVE_KEY = 'inheritance.demo.save.v1'
 
 export interface StorageLike {
   getItem(k: string): string | null
@@ -42,20 +42,20 @@ export function validateState(x: unknown): x is GameState {
   return true
 }
 
-export function writeSave(storage: StorageLike, state: GameState, now = Date.now()): boolean {
+export function writeSave(storage: StorageLike, state: GameState, now = Date.now(), key = SAVE_KEY): boolean {
   try {
     const f: SaveFile = { version: SAVE_VERSION, savedAt: now, state }
-    storage.setItem(SAVE_KEY, JSON.stringify(f))
+    storage.setItem(key, JSON.stringify(f))
     return true
   } catch {
     return false
   }
 }
 
-export function readSave(storage: StorageLike): LoadResult {
+export function readSave(storage: StorageLike, key = SAVE_KEY): LoadResult {
   let raw: string | null
   try {
-    raw = storage.getItem(SAVE_KEY)
+    raw = storage.getItem(key)
   } catch {
     return { ok: false, reason: 'none', message: 'Saving is unavailable in this browser.' }
   }
@@ -67,8 +67,8 @@ export function readSave(storage: StorageLike): LoadResult {
     return { ok: true, state: f.state, savedAt: f.savedAt }
   } catch {
     try {
-      storage.setItem(BACKUP_KEY, raw)
-      storage.removeItem(SAVE_KEY)
+      storage.setItem(`${key}.invalid`, raw)
+      storage.removeItem(key)
     } catch {
       /* ignore */
     }
@@ -76,9 +76,9 @@ export function readSave(storage: StorageLike): LoadResult {
   }
 }
 
-export function clearSave(storage: StorageLike) {
+export function clearSave(storage: StorageLike, key = SAVE_KEY) {
   try {
-    storage.removeItem(SAVE_KEY)
+    storage.removeItem(key)
   } catch {
     /* ignore */
   }
