@@ -8,7 +8,7 @@ Everything here is a hypothesis to test, not a forecast. No demand for the game 
 
 ## Suggested order
 1. **Host the static site.** It is deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main` (Settings → Pages → Source: GitHub Actions). The site is relative-path only, so it also works on any other static host. The live address is `https://artsensiva.github.io/Inheritance-Three-Generations/`.
-2. **Test demand cheaply** before spending much: several landing-page framings, cost per sign-up. Provisional rule from the earlier memo: continue at $0.25 or less per sign-up, stop above $0.75 (assumptions, not industry norms). This needs sign-up collection or analytics, which the site deliberately does not have; adding either is a decision about collecting user data.
+2. **Test demand cheaply** before spending much: several landing-page framings, cost per sign-up. Provisional rule from the earlier memo: continue at $0.25 or less per sign-up, stop above $0.75 (assumptions, not industry norms). Visit analytics can be switched on without code changes (see `docs/ANALYTICS.md`); sign-up collection is a separate decision about collecting user data and does not exist yet.
 3. **Playtest** with 5–10 observed players; compare the playable demo with a plain written summary.
 4. **Payment probe**: early access on a store checkout with a stated delivery date and refund terms; count completed payments, not clicks.
 5. **Steam** only if the earlier steps hold up: a $100 app fee per title (recoupable after $1,000 in sales, per Steamworks), a "coming soon" page to build wish-lists, desktop packaging, age-rating and tax forms.
