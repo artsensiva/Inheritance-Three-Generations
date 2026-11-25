@@ -4,6 +4,8 @@
  *   site/play/                                      — the free demo build
  * Optional: VITE_WISHLIST_URL=https://… adds a wish-list button (landing page and demo end screen).
  * Optional: ANALYTICS_SCRIPT_SRC (+ ANALYTICS_ATTRS) adds privacy-conscious visit analytics; see docs/ANALYTICS.md.
+ * Optional: LEGAL_DETAILS alone adds Impressum and privacy pages (needed for a commercial site in Germany); SITE_URL adds canonical links and sitemap.xml.
+ * Every build adds a Content-Security-Policy meta tag and a 404 page.
  * Optional: PAYMENT_LINK_URL (+ PRICE_LABEL, DOWNLOAD_URL, LEGAL_DETAILS) adds a Stripe Payment Link buy flow, /thanks/ and legal pages; see docs/PAYMENTS.md.
  * Nothing is uploaded or published by this script.
  */
@@ -14,11 +16,14 @@ import { getEnding } from '../src/engine/endings'
 import { legacySvg } from '../src/ui/legacy'
 import { STARTS } from '../src/content/catalog'
 import { analyticsLoader, injectLoader, parseAnalyticsConfig, privacyParagraph } from './analytics'
-import { buyButton, buyNote, findPlaceholders, footerLinks, parseShopConfig, renderPage, shopPages } from './shop'
+import { buyButton, buyNote, findPlaceholders, footerLinks, legalPages, parseLegalConfig, parseShopConfig, renderPage } from './shop'
+import { hardenHead, notFoundPage, parseSiteUrl, sitemap } from './headers'
 
 const out = 'site'
 const analytics = parseAnalyticsConfig(process.env)
 const shop = parseShopConfig(process.env)
+const legalCfg = shop ? { legal: shop.legal, allowPlaceholders: shop.allowPlaceholders } : parseLegalConfig(process.env)
+const site = parseSiteUrl(process.env)
 rmSync(out, { recursive: true, force: true })
 mkdirSync(out, { recursive: true })
 
@@ -49,41 +54,53 @@ const button = shop
   ? buyButton(shop)
   : url
   ? `<a class="btn" href="${url.replace(/"/g, '&quot;')}" rel="noopener">Wish-list the full game</a>`
-  : '<span class="note" style="align-self:center">The full game is not released yet.</span>'
+  : '<span class="note self-center">The full game is not released yet.</span>'
 let html = readFileSync('landing/index.html', 'utf8').replace('{{WISHLIST_BUTTON}}', button)
   .replace('{{BUY_NOTE}}', shop ? buyNote(shop) : '')
-  .replace('{{FOOTER_LINKS}}', shop ? ` ${footerLinks('./')}` : '')
-  .replace('{{PRIVACY_TEXT}}', privacyParagraph(analytics, !!shop))
+  .replace('{{FOOTER_LINKS}}', legalCfg ? ` ${footerLinks('./', !!shop)}` : '')
+  .replace('{{PRIVACY_TEXT}}', privacyParagraph(analytics, !!shop, !!legalCfg))
+const playPath = `${out}/play/index.html`
+let playHtml = readFileSync(playPath, 'utf8')
 if (analytics) {
   writeFileSync(`${out}/analytics.js`, analyticsLoader(analytics))
   html = injectLoader(html, './analytics.js')
-  const playPath = `${out}/play/index.html`
-  writeFileSync(playPath, injectLoader(readFileSync(playPath, 'utf8'), '../analytics.js'))
+  playHtml = injectLoader(playHtml, '../analytics.js')
   console.log(`Analytics enabled (${analytics.host}); skipped for Do Not Track / Global Privacy Control.`)
 } else {
   console.log('Analytics: none (ANALYTICS_SCRIPT_SRC not set).')
 }
-const shopHtml: Record<string, string> = {}
-if (shop) {
+
+const canon = (dir: string) => (site ? new URL(dir ? `${dir}/` : '', site).toString() : null)
+const pages: Record<string, string> = {}
+if (legalCfg) {
   const shell = readFileSync('landing/page.html', 'utf8')
-  for (const page of shopPages(shop, { analyticsHost: analytics?.host ?? null })) {
-    let h = renderPage(shell, page)
+  const links = footerLinks('../', !!shop)
+  for (const page of legalPages(legalCfg.legal, { analyticsHost: analytics?.host ?? null, shop })) {
+    let h = renderPage(shell, page, links)
     if (analytics) h = injectLoader(h, '../analytics.js')
-    shopHtml[page.dir] = h
+    pages[page.dir] = hardenHead(h, { kind: 'page', analytics, canonical: page.robots === 'noindex' ? null : canon(page.dir) })
   }
-  // Fail closed: never publish a checkout button next to unfinished legal text.
-  const open = findPlaceholders([html, ...Object.values(shopHtml)].join('\n'))
-  if (open.length && !shop.allowPlaceholders) {
-    throw new Error(`Payment flow is enabled but legal details are incomplete. Fill these in (LEGAL_DETAILS, DOWNLOAD_URL):\n  ${open.join('\n  ')}\nSet ALLOW_PLACEHOLDER_LEGAL=1 only for a local preview.`)
+  // Fail closed: never publish legal pages, or a checkout button, with unfinished text.
+  const open = findPlaceholders([html, ...Object.values(pages)].join('\n'))
+  if (open.length && !legalCfg.allowPlaceholders) {
+    throw new Error(`Legal pages are enabled but details are incomplete. Fill these in (LEGAL_DETAILS, DOWNLOAD_URL):\n  ${open.join('\n  ')}\nSet ALLOW_PLACEHOLDER_LEGAL=1 only for a local preview.`)
   }
-  for (const [dir, h] of Object.entries(shopHtml)) {
+  for (const [dir, h] of Object.entries(pages)) {
     mkdirSync(`${out}/${dir}`, { recursive: true })
     writeFileSync(`${out}/${dir}/index.html`, h)
   }
-  console.log(`Payment flow enabled (Stripe Payment Link, ${shop.price}); pages: ${Object.keys(shopHtml).join(', ')}${open.length ? `; ${open.length} placeholder(s) still open (preview only)` : ''}`)
+  console.log(`Legal pages: ${Object.keys(pages).join(', ')}${open.length ? `; ${open.length} placeholder(s) still open (preview only)` : ''}`)
 } else {
-  console.log('Payment flow: none (PAYMENT_LINK_URL not set).')
+  console.log('Legal pages: none (LEGAL_DETAILS not set). A commercial site in Germany needs an Impressum and privacy information.')
 }
-writeFileSync(`${out}/index.html`, html)
+console.log(shop ? `Payment flow enabled (Stripe Payment Link, ${shop.price}).` : 'Payment flow: none (PAYMENT_LINK_URL not set).')
+
+writeFileSync(`${out}/index.html`, hardenHead(html, { kind: 'page', analytics, canonical: canon('') }))
+writeFileSync(playPath, hardenHead(playHtml, { kind: 'app', analytics, canonical: canon('play') }))
+writeFileSync(`${out}/404.html`, notFoundPage(site, analytics))
+if (site) {
+  writeFileSync(`${out}/sitemap.xml`, sitemap(site, ['play', ...Object.keys(pages).filter((d) => d !== 'thanks')]))
+  console.log(`Canonical links and sitemap.xml for ${site.toString()}`)
+}
 cpSync('landing/landing.css', `${out}/landing.css`)
 console.log('Site ready in ./site')

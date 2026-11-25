@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buyButton, buyNote, escapeHtml, findPlaceholders, parseShopConfig, renderPage, shopPages, vatNote } from '../scripts/shop'
+import { buyButton, buyNote, escapeHtml, findPlaceholders, legalPages, parseLegalConfig, parseShopConfig, renderPage, vatNote } from '../scripts/shop'
 import { privacyParagraph } from '../scripts/analytics'
 
 const LINK = { PAYMENT_LINK_URL: 'https://buy.stripe.com/test_abc123', PRICE_LABEL: '€9.99' }
@@ -42,12 +42,29 @@ describe('shop config', () => {
   })
 })
 
+describe('legal pages without a buy flow', () => {
+  it('is off without LEGAL_DETAILS and on with it', () => {
+    expect(parseLegalConfig({})).toBeNull()
+    expect(parseLegalConfig({ LEGAL_DETAILS: FULL_LEGAL })!.legal.name).toBe('Erika Mustermann')
+    expect(() => parseLegalConfig({ LEGAL_DETAILS: '{"nmae":"x"}' })).toThrow(/unknown field/)
+  })
+  it('makes only the Impressum and privacy pages, with nothing about purchases or small-business status to fill in', () => {
+    const l = parseLegalConfig({ LEGAL_DETAILS: JSON.stringify({ name: 'Erika Mustermann', street: 'Musterstr. 1', postalCity: '10115 Berlin', email: 'hello@example.org' }) })!.legal
+    const pages = legalPages(l, { analyticsHost: null, shop: null })
+    expect(pages.map((p) => p.dir)).toEqual(['impressum', 'privacy'])
+    const all = pages.map((p) => p.body).join('')
+    expect(findPlaceholders(all)).toEqual([])
+    expect(all).not.toMatch(/Stripe|withdraw|dispute/i)
+    expect(all).toContain('does not use analytics')
+  })
+})
+
 describe('rendering', () => {
   it('escapes every injected value and highlights placeholders', () => {
     expect(escapeHtml(`<a href="x">&'`)).toBe('&lt;a href=&quot;x&quot;&gt;&amp;&#39;')
     const c = parseShopConfig({ ...LINK, PRICE_LABEL: '€9<b>', LEGAL_DETAILS: JSON.stringify({ name: '<script>x</script>' }) })!
     expect(buyButton(c)).not.toContain('<b>')
-    const pages = shopPages(c, { analyticsHost: null }).map((p) => p.body).join('')
+    const pages = legalPages(c.legal, { analyticsHost: null, shop: c }).map((p) => p.body).join('')
     expect(pages).not.toContain('<script>')
     expect(pages).toContain('&lt;script&gt;')
     expect(pages).toContain('<mark class="ph">[[')
@@ -60,13 +77,13 @@ describe('rendering', () => {
   })
   it('marks pages with open placeholders as drafts and noindexes the thanks page', () => {
     const draft = parseShopConfig(LINK)!
-    const pages = shopPages(draft, { analyticsHost: null })
+    const pages = legalPages(draft.legal, { analyticsHost: null, shop: draft })
     expect(pages.map((p) => p.dir)).toEqual(['impressum', 'privacy', 'withdrawal', 'thanks'])
-    const imp = renderPage(SHELL, pages[0])
+    const imp = renderPage(SHELL, pages[0], '')
     expect(imp).toContain('Draft template')
     expect(findPlaceholders(imp).length).toBeGreaterThan(0)
-    expect(renderPage(SHELL, pages[3])).toContain('content="noindex, nofollow"')
-    expect(renderPage(SHELL, pages[0])).toContain('content="index, follow"')
+    expect(renderPage(SHELL, pages[3], '')).toContain('content="noindex, nofollow"')
+    expect(renderPage(SHELL, pages[0], '')).toContain('content="index, follow"')
   })
   it('has no placeholders left once everything is supplied', () => {
     const c = parseShopConfig({
@@ -74,7 +91,7 @@ describe('rendering', () => {
       DOWNLOAD_URL: 'https://files.example.org/inheritance.zip',
       LEGAL_DETAILS: JSON.stringify({ name: 'Erika Mustermann', street: 'Musterstr. 1', postalCity: '10115 Berlin', email: 'hello@example.org', smallBusiness: false, disputeResolution: 'unwilling', deliveryHost: 'itch.io' }),
     })!
-    const pages = shopPages(c, { analyticsHost: 'stats.example.org' })
+    const pages = legalPages(c.legal, { analyticsHost: 'stats.example.org', shop: c })
     expect(findPlaceholders(pages.map((p) => p.body).join(''))).toEqual([])
     expect(pages.find((p) => p.dir === 'privacy')!.body).toContain('itch.io')
     expect(pages.find((p) => p.dir === 'impressum')!.body).toContain('neither willing nor obliged')
