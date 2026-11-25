@@ -52,6 +52,6 @@ gh workflow run "Deploy site to GitHub Pages"
 ## Limits you should know
 * **The download link is not protected.** `/thanks/` is a public page: anyone with the address can use the link, and a Payment Link cannot verify a visit. Fine for a first small release; for anything more, serve the file from a store (itch.io, Steam) or add a server check against the Stripe session. The page is `noindex` and not linked from anywhere else.
 * **There is no downloadable build yet.** The repository produces the web build (`npm run build`) but not a packaged game; decide what buyers receive before you sell.
-* **The repository is public**, so the full game's source and writing are readable by anyone. Decide on the repository's visibility and a licence first.
+* **The repository is public**, so the full game's source and writing are readable by anyone. The repository is licensed **All rights reserved** (see `LICENSE`), which allows viewing but not reuse; that does not stop people from reading it, so make it private if you want the source hidden.
 * **Analytics are page views only.** If analytics are on, `/thanks/` views are a rough proxy for purchases; Stripe's dashboard is the source of truth.
 * **Refunds** are done in the Stripe dashboard. Complaints, receipts and invoices for Kleinunternehmer vs. VAT-registered sellers have their own rules; ask your tax adviser.

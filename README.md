@@ -129,3 +129,7 @@ This is a hypothesis to test, not a forecast. No demand has been demonstrated.
 * **Free web demo:** one starting family (the Marlow Cooperage), the first generation plus the heir decision, the family tree and the legacy card, with about 20 events and a few chains; a prompt to wish-list the full game.
 * **Paid version:** all three families, three generations, four ambitions, 60 events, 12 endings, the legacy card, replay with other strategies. A low premium price on Steam or itch.io is the starting hypothesis; the price is a test variable.
 * **Possible later content:** a second town or era with new events and chains, if the first release shows replay and word of mouth.
+
+## Licence
+
+Copyright (c) 2026 artsensiva. **All rights reserved.** The repository is public so that it can be read, but no licence is granted to copy, modify, redistribute or sell the code, writing or artwork without written permission (see [LICENSE](LICENSE)). Third-party dependencies keep their own licences ([THIRD_PARTY.md](THIRD_PARTY.md)).

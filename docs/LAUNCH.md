@@ -18,5 +18,5 @@ Do not build payments into the game. Use the checkout of the store you sell thro
 
 ## Open decisions for the owner
 * Country and payment channel; budget cap for any ad spend.
-* Whether the repository should stay public for a paid game (the code and all writing are visible), and which licence applies. No licence is included.
+* Whether the repository should stay public for a paid game (the code and all writing are visible), and which licence applies. The repository is currently **All rights reserved** (see `LICENSE`): the code is visible, but nobody may reuse it without permission.
 * Whether to collect emails or analytics, and under which privacy statement.
